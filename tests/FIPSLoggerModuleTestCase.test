@@ -1,0 +1,135 @@
+<?php
+class FIPSLoggerModuleTestCase extends DrupalWebTestCase {
+
+  public static function getInfo() {
+    return array(
+      'name' => 'FIPSLogger Module Unit Tests',
+      'description' => 'Test that fips_logger module functions are logging  and reporting properly.',
+      'group' => 'FIPS Logger'
+    );
+
+  }
+
+  /**
+   * I set up the class to be used for testing.
+   */
+  function setUp() {
+    // inject dependencies
+    parent::setUp('fips_logger', 'syslog');
+
+  }
+
+  // MODULE enabled
+  public function testFIPSLoggerModuleEnabled() {
+    $module = array(
+      'foo',
+      'bar'
+    );
+    $result = fips_logger_modules_enabled( $module );
+    $message = 'Module ENABLE. I should return TRUE.';
+    $this->assertTrue($result, $message);
+  }
+  public function testFIPSLoggerModuleEnabledFailZeroElements() {
+    $argument = array();
+    $result = fips_logger_modules_enabled($argument);
+    $message = 'Module ENABLE FAIL. I should return FALSE. Array with 0 elements passed.';
+    $this->assertFalse($result, $message);
+  }
+  public function testFIPSLoggerModuleEnabledFailBadArguments() {
+    $argument = false;
+    $result = fips_logger_modules_enabled($argument);
+    $message = 'Module ENABLE FAIL. I should return FALSE. Bad arguments passed.';
+    $this->assertFalse($result, $message);
+  }
+  public function testFIPSLoggerModuleEnabledFailNoArgument() {
+    $result = fips_logger_modules_enabled();
+    $message = 'Module ENABLE FAIL. I should return FALSE. No arguments passed.';
+    $this->assertFalse($result, $message);
+  }
+
+  // MODULE disabled
+  public function testFIPSLoggerModuleDisable() {
+    $module = array(
+      'foo',
+      'bar'
+    );
+    $result = fips_logger_modules_disabled( $module );
+    $message = 'Module DISABLE. I should return TRUE.';
+    $this->assertTrue($result, $message);
+  }
+  public function testFIPSLoggerModuleDisableFailZeroElements() {
+    $argument = array();
+    $result = fips_logger_modules_disabled($argument);
+    $message = 'Module DISABLE FAIL. I should return FALSE. Zero elements passed.';
+    $this->assertFalse($result, $message);
+  }
+  public function testFIPSLoggerModuleDisableFailBadArguments() {
+    $argument = 'phat';
+    $result = fips_logger_modules_disabled($argument);
+    $message = 'Module DISABLE FAIL. I should return FALSE. Bad arguments passed.';
+    $this->assertFalse($result, $message);
+  }
+  public function testFIPSLoggerModuleDisableFailNoArguments() {
+    $result = fips_logger_modules_disabled();
+    $message = 'Module DISABLE FAIL. I should return FALSE. No arguments passed.';
+    $this->assertFalse($result, $message);
+  }
+
+  // MODULE installed
+  public function testFIPSLoggerModuleInstalled() {
+    $module = array(
+      'foo',
+      'bar'
+    );
+    $result = fips_logger_modules_installed( $module );
+    $message = 'Module INSTALLED. I should return TRUE.';
+    $this->assertTrue($result, $message);
+  }
+  public function testFIPSLoggerModuleInstalledFailZeroElement() {
+    $argument = array();
+    $result = fips_logger_modules_installed($argument);
+    $message = 'Module INSTALLED FAIL. I should return FALSE. Zero elements passed.';
+    $this->assertFalse($result, $message);
+  }
+  public function testFIPSLoggerModuleInstalledFailBadArgument() {
+    $argument = false;
+    $result = fips_logger_modules_installed($argument);
+    $message = 'Module INSTALLED FAIL. I should return FALSE. Bad arguments passed.';
+    $this->assertFalse($result, $message);
+  }
+  public function testFIPSLoggerModuleInstalledFailNoArgument() {
+    $result = fips_logger_modules_installed();
+    $message = 'Module INSTALLED FAIL. I should return FALSE. No arguments passed.';
+    $this->assertFalse($result, $message);
+  }
+
+  // MODULE uninstalled
+  public function testFIPSLoggerModuleUninstalled() {
+    $module = array(
+      'foo',
+      'bar'
+    );
+    $result = fips_logger_modules_uninstalled( $module );
+    $message = 'Module UNINSTALLED. I should return TRUE.';
+    $this->assertTrue($result, $message);
+  }
+  public function testFIPSLoggerModuleUninstalledFailZeroElements() {
+    $argument = array();
+    $result = fips_logger_modules_uninstalled($argument);
+    $message = 'Module UNINSTALLED FAIL. I should return FALSE. Zero elements passed.';
+    $this->assertFalse($result, $message);
+  }
+  public function testFIPSLoggerModuleUninstalledFailBadArgument() {
+    $argument = 'string';
+    $result = fips_logger_modules_uninstalled($argument);
+    $message = 'Module UNINSTALLED FAIL. I should return FALSE. Bad argument passed.';
+    $this->assertFalse($result, $message);
+  }
+  /*
+  public function testFIPSLoggerModuleUninstalledFailNoArgument() {
+    $result = fips_logger_modules_uninstalled();
+    $message = 'Module UNINSTALLED FAIL. I should return FALSE. No arguments passed.';
+    $this->assertFalse($result, $message);
+  }
+  */
+}

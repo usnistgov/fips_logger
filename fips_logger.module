@@ -1,0 +1,356 @@
+<?php
+/**
+ * @file
+ * Module file for the FIPS Logger.
+ *
+ * Requirements are derived from:
+ * https://connection.commerce.gov/sites/connection.commerce.gov/files/2014_doc_itspp.pdf.
+ * See section 4.5 (starting on page 38) of the above document.
+ *
+ * Propose:
+ * Drupals' base line logging covers most of the FIPS requirements, failed login
+ * attempts, role changes, user deletions, user creation, content submission,
+ * critical errors and Apache covers the web server errors. What was missing was
+ * 1. content changes to menu's
+ * 2. changes to fields
+ * 3. changes to modules
+ * those have been incorporated into this logger.
+ *
+ * Usage:
+ * This module should be implemented using syslog. No other configuration is
+ * required.
+ *
+ * History:
+ * We removed configuration items for a couple of reasons
+ * 1. We desired to just create a module that was set-it-and-forget-it
+ * 2. If we used configuration we would have to hit the db for the values and
+ *    we desired to have the logger be as light weight as possible
+ */
+
+define('FIPSLoggerWarningPrefix', 'FIPS_LOGGER Warning!! ');
+
+// ************************************* Menus *************************** //
+// See Section 4.5 / Audit Events AU-3 and AU-3.2 of the DOC document.
+/**
+ * Implements hook_menu_link_delete()
+ */
+function fips_logger_menu_link_delete( $link = NULL ){
+  return fips_logger_logMenuAction($link, 'DELETED');
+}
+
+/**
+ * Implements hook_menu_link_insert()
+ */
+function fips_logger_menu_link_insert($link = NULL){
+  return fips_logger_logMenuAction( $link, 'INSERTED' );
+}
+
+/**
+ * Implements hook_menu_link_update()
+ */
+function fips_logger_menu_link_update($link = NULL){
+  return fips_logger_logMenuAction($link, 'UPDATED');
+}
+
+/**
+ * I log what menu has had an item change
+ * @param $link - I am the link array of information.
+ * @param $action - I am the action that was taken
+ * @return bool
+ */
+function fips_logger_logMenuAction($link, $action){
+  if(is_array($link) && isset($link['menu_name']) && isset($link['link_title'])){
+
+    $message = 'The Menu: ' . $link['menu_name'] . ' link: '. $link['link_title'] . ' was ' . $action;
+    return fips_logger_writeLogMessage($message);
+
+  } else {
+
+    fips_logger_writeLogMessage(FIPSLoggerWarningPrefix . ' Someone tried to perform link modifications (' . $action .') with malformed or no arguments.');
+  }
+}
+
+// ************************************* Fields **************************** //
+// See Section 4.5 / See section Audit Events AU-2 and AU-2.3 of the DOC document.
+/**
+ * Implements hook_field_update_field().
+ */
+function fips_logger_field_update_field( $field = NULL, $prior_field = NULL, $has_data = NULL){
+  return fips_logger_logFieldAction( $field, 'UPDATED');
+}
+
+/**
+ * Implements hook_field_delete_field().
+ */
+function fips_logger_field_delete_field( $field = NULL ){
+  return fips_logger_logFieldAction($field, 'DELETED');
+}
+
+/**
+ * Implements hook_field_create_field().
+ */
+function fips_logger_field_create_field( $field = NULL ){
+  return fips_logger_logFieldAction($field, 'CREATED');
+}
+
+/**
+ * I log what action was taken on a field
+ * @param $field - I am the field object. I am required.
+ * @param $action - I am what action took place
+ * @return bool - whether the log entry was put in the log file or not
+ */
+function fips_logger_logFieldAction($field, $action){
+  if( is_array($field) && isset($field['field_name']) ) {
+
+    $message = 'The Field: ' . $field['field_name'] . ' was '. $action;
+
+    return fips_logger_writeLogMessage($message);
+
+  } else {
+
+    fips_logger_writeLogMessage(FIPSLoggerWarningPrefix . 'An attempt to modify ('. $action .') a field failed because of malformed arguments.');
+
+    return false;
+  }
+}
+
+// ************************************* Modules **************************** //
+// See Section 4.5 / See section Audit Events AU-2 and AU-2.3 of the DOC document.
+/**
+ * Implements hook_modules_enabled()
+ */
+function fips_logger_modules_enabled($modules = NULL){
+  return fips_logger_logModuleAction($modules, "ENABLED");
+}
+
+/**
+ * Implements hook_modules_disabled()
+ */
+function fips_logger_modules_disabled($modules = NULL){
+  return fips_logger_logModuleAction($modules, "DISABLED");
+}
+
+/**
+ * Implements hook_modules_installed()
+ */
+function fips_logger_modules_installed($modules = NULL){
+  return fips_logger_logModuleAction($modules, "INSTALLED");
+}
+
+/**
+ * Implements hook_modules_uninstalled()
+ */
+function fips_logger_modules_uninstalled($modules = NULL){
+  return fips_logger_logModuleAction($modules, "UNINSTALLED");
+}
+
+/**
+ * I log what action has been taken on a module
+ * @param $modules - I am the array of modules upon what action was taken
+ * @param $action - I am the action that was taken on the modules
+ * @return bool - true or false if I logged anything
+ */
+function fips_logger_logModuleAction($modules, $action){
+  if( is_array($modules) && count($modules) === 0 ){
+
+    fips_logger_writeLogMessage(FIPSLoggerWarningPrefix . 'An attempt to modify ('. $action .') modules or a module failed because of malformed arguments. An array with no elements.');
+
+    return false;
+  }
+
+  if( !is_array($modules) ){
+
+    fips_logger_writeLogMessage(FIPSLoggerWarningPrefix . 'An attempt to modify ('. $action .') modules or a module failed because of malformed arguments.');
+
+    return false;
+  }
+
+  if ( count($modules) > 1 ){
+
+    $message = 'The modules: "'. implode(',', $modules) .'" have been ' . strtoupper($action);
+
+  } else {
+
+    $message = 'The module: "'. implode(',', $modules) .'" has been ' . strtoupper($action);
+
+  }
+
+  return fips_logger_writeLogMessage($message);
+}
+
+// ************************************* Users ***************************** //
+/**
+ * Implements hook_user_delete()
+ */
+function fips_logger_user_delete($account){
+  /*
+  $message = 'The User: ' . $account->name . ' was deleted.';
+  fips_logger_writeLogMessage($message);
+  */
+}
+
+/**
+ * Implements hook_user_insert()
+ */
+function fips_logger_user_insert($account){
+  /*
+  $message = 'The User: ' . $account->name . ' was CREATED.';
+  fips_logger_writeLogMessage($message);
+  */
+}
+
+/**
+ * Implements hook_user_update()
+ */
+function fips_logger_user_update(&$edit, $account, $category){
+  /*
+  $message = 'The User: ' . $account->name . ' was UPDATED.';
+  fips_logger_writeLogMessage($message);
+  */
+}
+
+// ************************************* Roles ***************************** //
+/**
+ * Implements hook_user_role_delete()
+ */
+function fips_logger_user_role_delete($role){
+  //dpm('A User Role has been Deleted.');
+  //dpm( $role );
+}
+
+/**
+ * Implements hook_user_role_insert()
+ */
+function fips_logger_user_role_insert($role){
+  //dpm('A User Role has been Deleted.');
+  //dpm( $role );
+}
+
+/**
+ * Implements hook_user_role_update()
+ */
+function fips_logger_user_role_update($role){
+  //dpm('A User Role has been Updated.');
+  //dpm( $role );
+}
+
+// *********************************** PRIVATE ****************************** //
+
+/**
+ * I write a log entry if syslog module is present and active, and if I was
+ * passed enough stuff to log. I return true if I logged and false if I did not.
+ *
+ * To log simple strings just fips_logger_writeLogMessage('im a string to log'). To customize
+ * the log message array object Drupal expects do something like
+ * $foo = fips_logger_getDefaultLogEntry(), then set the properties you desire then call
+ * fips_logger_writeLogMessage('', $foo);
+ *
+ * @param string $message - I am a string to write to the log.
+ * @param null $logEntry - I am an array that should be in the format Drupal expects.
+ * @return bool - I return true if I logged anything and false if I did not
+ */
+function fips_logger_writeLogMessage($message = '', $logEntry = NULL){
+  // use this to decide if we should log and also use as the return
+  $doLog = false;
+  // the final log entry array we will push to the syslog module
+  $entryForSysLog = '';
+
+  // are we getting a full log entry array? or just a message to log?
+  if (isset($logEntry)){
+
+    $entryForSysLog =  $logEntry;
+    $doLog = true;
+
+  } elseif (strlen($message)){ // just the message to log.
+
+    $entryForSysLog = fips_logger_getDefaultLogEntry();
+    $entryForSysLog['message'] = $message;
+    $doLog = true;
+  }
+
+  // TODO: we need to rethink this. we should ALWAYS use watchdog only, and not
+  // check for the existance of syslog...
+  //if ( (bool) module_exists('syslog') && $doLog) {
+
+  if ( $doLog ) {
+
+    watchdog('NOTICE', $message);
+    $doLog = true;
+
+  } else {
+
+    // syslog is not configured or nothing was passed so lets not lie.
+    $doLog = false;
+  }
+
+  return $doLog;
+}
+
+/**
+ * I return an object with all the default keys to use with the syslog module
+ * @return array
+ */
+function fips_logger_getDefaultLogEntry(){
+  /*
+    type: The type of message for this entry.
+    user: The user object for the user who was logged in when the event happened.
+    uid: The user ID for the user who was logged in when the event happened.
+    request_uri: The request URI for the page the event happened in.
+    referer: The page that referred the user to the page where the event occurred.
+    ip: The IP address where the request for the page came from.
+    timestamp: The UNIX timestamp of the date/time the event occurred.
+    severity: The severity of the message; one of the following values as defined in RFC 3164:
+    link: An optional link provided by the module that called the watchdog() function.
+    message: The text of the message to be logged. Variables in the message are indicated by using placeholder strings alongside the variables argument to declare the value of the placeholders. See t() for documentation on how the message and variable parameters interact.
+    variables: An array of variables to be inserted into the message on display. Will be NULL or missing if a message is already translated or if the message is not possible to tra
+  */
+
+  /* RFC codes
+     0             kernel messages
+     1             user-level messages
+     2             mail system
+     3             system daemons
+     4             security/authorization messages (note 1)
+     5             messages generated internally by syslogd
+     6             line printer subsystem
+     7             network news subsystem
+     8             UUCP subsystem
+     9             clock daemon (note 2)
+    10             security/authorization messages (note 1)
+    11             FTP daemon
+    12             NTP subsystem
+    13             log audit (note 1)
+    14             log alert (note 1)
+    15             clock daemon (note 2)
+    16             local use 0  (local0)
+    17             local use 1  (local1)
+    18             local use 2  (local2)
+    19             local use 3  (local3)
+    20             local use 4  (local4)
+    21             local use 5  (local5)
+    22             local use 6  (local6)
+    23             local use 7  (local7)
+   */
+
+  global $user;
+
+  $loggerName = 'FIPS Logger';
+
+  $drupalDestinationObject = drupal_get_destination();
+
+  return array(
+    'type' => 'drupal',
+    'user' => $user,
+    'uid' => $user->uid,
+    'request_uri' => $_SERVER['REMOTE_ADDR'] . request_uri(),
+    'referer' => $drupalDestinationObject['destination'],
+    'ip' => $_SERVER['REMOTE_ADDR'],
+    'timestamp' => time(),
+    'severity' => 4,
+    'link' => '',
+    'message' => 'NOTHING PASSED',
+    'variables' => array(
+      'logOrigin' => $loggerName
+    )
+  );
+}

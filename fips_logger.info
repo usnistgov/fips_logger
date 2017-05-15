@@ -1,0 +1,12 @@
+name = FIPS Logger
+description = I am a logger module for Drupal which adds functionality to meet FIPS logging requirements.
+package = Settings API
+version = 1.0
+core = 7.x
+php = 5.2
+files[] = fips_logger.module
+files[] = tests/FIPSLoggerMenuTestCase.test
+files[] = tests/FIPSLoggerFieldTestCase.test
+files[] = tests/FIPSLoggerModuleTestCase.test
+; NEW LINE
+;configure = admin/config/system/fips_logger
